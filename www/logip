@@ -1,0 +1,3 @@
+#<< system_log
+SYSLOG_SVR=192.168.11.6
+#>> system_log

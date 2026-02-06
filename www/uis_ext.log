@@ -1,0 +1,1 @@
+curl -m 5 -i -X POST -H "Content-Type:application/json" -d '{"sno":"001","sigtime":"2024/01/16 17:59:07 ","catg":"3","mno":"0780009","uid":"9MBMT39FVRSMZC8F111A","power":"A","lan":"1","scode":"ON022000000,"}' http://wlsecurity078.sks.com.tw/uisgw/api/receive
