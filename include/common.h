@@ -1,4 +1,4 @@
-#define VERSION "096C 20260206 正式區"
+#define VERSION "097C 20260211 正式區"
 
 #ifndef COMMON_H
 #define COMMON_H

@@ -17,7 +17,7 @@ char *buf = NULL; // 組回JSON值 // todo 寫在這裡不好,容易忘記釋放
 int bufFlag = 0;  // 1分配過 0沒分配過
 
 // sksiot log
-const char *UIS_name_log = "/var/www/sksiot_log.txt";
+const char *UIS_name_log = "/var/www/sks.log";
 const char *Loacl_name_log = "sksiot_log.txt"; // VM 測試路徑
 
 #ifdef DEBUGLEVEL2
