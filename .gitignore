@@ -1,5 +1,8 @@
 build/
-fw_data/MqttComm
+fw_data/
+cert/
+legacy/
+www/
 *.o
 *.d
 *.gch

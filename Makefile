@@ -11,9 +11,9 @@ CFLAGS += -g -Wall -Os -MMD -MP
 LDFLAGS += -L$(OPENSSL_DIR)
 LDLIBS += -lpthread -lssl -ldl -lcrypto -lm
 
-SRCS := cJSON.c MqttComm.c mqtt.c mqtt_pal.c create_objects.c \
-        ReadZoneMerge.c ReadZoneStatus.c ReadFlash.c RealTime.c LogManage.c
-OBJS := $(SRCS:%.c=$(OBJDIR)/%.o)
+SRCS := src/cJSON.c src/MqttComm.c src/mqtt.c src/mqtt_pal.c src/create_objects.c \
+        src/ReadZoneMerge.c src/ReadZoneStatus.c src/ReadFlash.c src/RealTime.c src/LogManage.c
+OBJS := $(SRCS:src/%.c=$(OBJDIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 .PHONY: all clean distclean MqttComm list-unused
@@ -29,11 +29,11 @@ list-unused:
 $(OUTDIR) $(OBJDIR):
 	mkdir -p $@
 
-$(OBJDIR)/%.o: %.c | $(OBJDIR)
+$(OBJDIR)/%.o: src/%.c | $(OBJDIR)
 	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
 
-$(TARGET_PATH): $(OBJS) libapmib.so | $(OUTDIR)
-	$(CC) $(LDFLAGS) $(OBJS) libapmib.so $(LDLIBS) -o $@
+$(TARGET_PATH): $(OBJS) lib/libapmib.so | $(OUTDIR)
+	$(CC) $(LDFLAGS) $(OBJS) lib/libapmib.so $(LDLIBS) -o $@
 
 -include $(DEPS)
 
