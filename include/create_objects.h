@@ -59,9 +59,9 @@ typedef struct rawdataattr_t
     char batch[10];     // 生產批號
     char SetupDate[10]; // 安裝日期
     char MFD[10];       // 出廠日期
-    char Loop1;
+    unsigned char Loop1;
     char devDescp[25];
-    char devPlaceNumZone;
+    unsigned char devPlaceNumZone;
     RawData_t data[9]; // 20231020 原本宣告3,電源控制器關係給8 大部分空間浪費
 } RawDataAttr_t;
 
