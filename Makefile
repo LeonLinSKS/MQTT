@@ -1,4 +1,5 @@
-CC = msdk-linux-gcc
+TOOLCHAIN = /home/kk/8198c_toolchain/toolchain/msdk-4.4.7-mips-EB-3.10-0.9.33-m32t-131227b
+CC       = $(TOOLCHAIN)/bin/msdk-linux-gcc
 OPENSSL_DIR ?= $(HOME)/openssl-1.0.2d
 
 TARGET := MqttComm

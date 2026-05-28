@@ -20,6 +20,11 @@ int bufFlag = 0;  // 1分配過 0沒分配過
 const char *UIS_name_log = "/var/www/sks.log";
 const char *Loacl_name_log = "sksiot_log.txt"; // VM 測試路徑
 
+static int is_valid_device_loop(int loop)
+{
+    return loop >= 1 && loop <= 90;
+}
+
 #ifdef DEBUGLEVEL2
 int main(void)
 {
@@ -590,6 +595,7 @@ int CJSON_CDECL create_JSONobjects(unsigned char index)
     double fbat, fbat2;
     unsigned short temp;
     int deviceNum2;
+    int valid_device_count = 0;
 
     root = cJSON_CreateObject();
     // printf("iot. A01 DeviceInfo.id= %s\n", DeviceInfo.id);
@@ -598,7 +604,24 @@ int CJSON_CDECL create_JSONobjects(unsigned char index)
     cJSON_AddStringToObject(root, "MAC", DeviceInfo.macAddress);
     cJSON_AddStringToObject(root, "rawdataTime", DeviceInfo.rawdataTime);
     if (index == 0)
-        cJSON_AddItemToObject(root, "loopArray", cJSON_CreateIntArray(DeviceInfo.attributes.looparray, deviceNum)); // 數值
+    {
+        cJSON *loop_array = cJSON_CreateArray();
+        int loop_count = deviceNum;
+        int loop_array_size = sizeof(DeviceInfo.attributes.looparray) / sizeof(DeviceInfo.attributes.looparray[0]);
+        int loop_index;
+
+        if (loop_count > loop_array_size)
+            loop_count = loop_array_size;
+
+        for (loop_index = 0; loop_index < loop_count; loop_index++)
+        {
+            int device_loop = DeviceInfo.attributes.looparray[loop_index];
+
+            if (is_valid_device_loop(device_loop))
+                cJSON_AddItemToArray(loop_array, cJSON_CreateNumber(device_loop));
+        }
+        cJSON_AddItemToObject(root, "loopArray", loop_array);
+    }
     cJSON_AddItemToObject(root, "attributes", att = cJSON_CreateObject());
     cJSON_AddStringToObject(att, "mnoVersion", DeviceInfo.attributes.version);
     cJSON_AddStringToObject(att, "mnoFirmware", DeviceInfo.attributes.firmware);
@@ -618,6 +641,15 @@ int CJSON_CDECL create_JSONobjects(unsigned char index)
         deviceNum2 = deviceNum;
     for (i = index * 10; i < deviceNum2; i++)
     {
+        int device_loop = RawDataInfo[i].attributes.Loop1;
+
+        if (!is_valid_device_loop(device_loop))
+        {
+            printf("iot. Skip invalid device loop = %d, id = %s\n", device_loop, RawDataInfo[i].id);
+            continue;
+        }
+
+        valid_device_count++;
         cJSON_AddItemToObject(raw, "attributes", att1 = cJSON_CreateObject());
         cJSON_AddStringToObject(att1, "id", RawDataInfo[i].id);
         cJSON_AddStringToObject(att1, "manufacturerId", RawDataInfo->manufacturerId);
@@ -784,6 +816,11 @@ int CJSON_CDECL create_JSONobjects(unsigned char index)
             cJSON_AddStringToObject(data1, "unit", RawDataInfo[i].attributes.data[6].unit);
             cJSON_AddStringToObject(data1, "dimension", RawDataInfo[i].attributes.data[6].dimension);
         }
+    }
+    if (valid_device_count == 0)
+    {
+        cJSON_Delete(root);
+        return -1;
     }
     if (print_preallocated(root) != 0)
     {
