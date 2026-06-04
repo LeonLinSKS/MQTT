@@ -25,6 +25,12 @@ extern int bufFlag;
 extern char g_mno[30];
 #define MAX_LOGGER_SIZE 3840
 
+#ifdef VM
+#define MQTT_JSON_LOG_PATH "MQTT_json.log"
+#else
+#define MQTT_JSON_LOG_PATH "/var/www/MQTT_json.log"
+#endif
+
 #ifdef TLSON
 SSL_CTX *ssl_ctx;
 BIO *sockfd;
@@ -63,6 +69,10 @@ void *SendLogForMQTT(void *arg);
 void* send_buf(void* arg);
 /* 傳送指令執行結果或日誌檔回饋的執行緒 */
 void* send_feedback(void* arg);
+/* 將 mqtt_listener 產生的 JSON payload 附加寫入檔案，供現場追蹤 publish 內容 */
+static void WriteMQTTJsonLog(const char *json_payload);
+/* 清空上一輪 mqtt_listener 留下的 JSON 紀錄，只保留最新一輪資料 */
+static void ClearMQTTJsonLog(void);
 
 // 執行緒控制標籤
 bool publish_ack = false;
@@ -448,6 +458,44 @@ void *client_refresher(void *client)
     return NULL;
 }
 
+static void WriteMQTTJsonLog(const char *json_payload)
+{
+    FILE *fp_mqtt_json = NULL;
+
+    if (json_payload == NULL)
+        return;
+
+    fp_mqtt_json = fopen(MQTT_JSON_LOG_PATH, "a");
+    if (fp_mqtt_json == NULL)
+    {
+        RealTimeFormat();
+        memset(logbuf, 0, lofbufsize);
+        sprintf(logbuf, "%s: %s/%s, open %s fail \n", timestring_TimeFormat, __FILE__, __func__, MQTT_JSON_LOG_PATH);
+        WriteToLogFile(logbuf);
+        return;
+    }
+
+    fputs(json_payload, fp_mqtt_json);
+    fputc('\n', fp_mqtt_json);
+    fclose(fp_mqtt_json);
+}
+
+static void ClearMQTTJsonLog(void)
+{
+    FILE *fp_mqtt_json = fopen(MQTT_JSON_LOG_PATH, "w");
+
+    if (fp_mqtt_json == NULL)
+    {
+        RealTimeFormat();
+        memset(logbuf, 0, lofbufsize);
+        sprintf(logbuf, "%s: %s/%s, clear %s fail \n", timestring_TimeFormat, __FILE__, __func__, MQTT_JSON_LOG_PATH);
+        WriteToLogFile(logbuf);
+        return;
+    }
+
+    fclose(fp_mqtt_json);
+}
+
 /**
  * @brief 負責打包並定期發布感測器資料至 MQTT Broker，同時處理傳輸異常。
  */
@@ -492,6 +540,7 @@ void *mqtt_listener(void *arg)
                 {
                     DeviceInfo = InitialDeviceInfoValue(DeviceInfo);
                     forloop = (deviceNum + 9) / 10; // 每 10 個設備資料打包成一包 JSON
+                    ClearMQTTJsonLog();
                     int b;
                     for (b = 0; b < forloop; b++) 
                     {
@@ -506,6 +555,7 @@ void *mqtt_listener(void *arg)
                             printf("iot. The total number of times sent out = %d\n", conuntA++);
                             bzero(pub_topic, sizeof(pub_topic));
                             sprintf(pub_topic, "/%s/%s/%s/%s", "iot", "sks", "publish", "rawdatalist");
+                            WriteMQTTJsonLog(buf);
 
                             int retry_local = 0;
                             // 嘗試發送，失敗則重試

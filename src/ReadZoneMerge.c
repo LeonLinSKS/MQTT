@@ -10,6 +10,52 @@
 typedef unsigned char u_int8_t;
 #endif
 
+static int IsZeroIeeeAddress(const unsigned char *ieeeAddress)
+{
+	int i;
+
+	for (i = 0; i < 8; i++)
+	{
+		if (ieeeAddress[i] != 0)
+			return 0;
+	}
+
+	return 1;
+}
+
+static int IsSameIeeeAddress(const unsigned char *a, const unsigned char *b)
+{
+	int i;
+
+	for (i = 0; i < 8; i++)
+	{
+		if (a[i] != b[i])
+			return 0;
+	}
+
+	return 1;
+}
+
+static void PrintZoneMergeDecision(int record_index, const Zone_Device_Merge *record, const char *decision)
+{
+	printf("iot. ZoneMerge record #%d %s: type=%u endpoint=%u loop=%u zone=%u index=%u ieee=%02X %02X %02X %02X %02X %02X %02X %02X\n",
+		   record_index,
+		   decision,
+		   record->type,
+		   record->endpoint,
+		   record->devPlaceNum[0],
+		   record->devPlaceNum[1],
+		   record->index,
+		   record->ieeeAddress[0],
+		   record->ieeeAddress[1],
+		   record->ieeeAddress[2],
+		   record->ieeeAddress[3],
+		   record->ieeeAddress[4],
+		   record->ieeeAddress[5],
+		   record->ieeeAddress[6],
+		   record->ieeeAddress[7]);
+}
+
 
 #ifdef DEBUG
 int main(void)
@@ -64,18 +110,20 @@ int ReadZoneMergeSize(void)
 	rewind(fp);				 // 回退到文件開頭
 	fclose(fp);
 
-    #ifdef DEBUGLPRINT
-	printf("iot. size =  %d \n", size);
-    #endif
+	printf("iot. ZoneMerge file size = %d bytes, record size = %u bytes\n", size, (unsigned)sizeof(Zone_Device_Merge));
 	
-	if (size < 88)
+	if (size < (int)sizeof(Zone_Device_Merge))
 	{
 		printf("iot. failed file size.\n");
 		return readSize; // EXIT_FAILURE
 	}
 	else
 	{
-		return size / 88;
+		int record_count = size / sizeof(Zone_Device_Merge);
+		int remain_size = size % sizeof(Zone_Device_Merge);
+
+		printf("iot. ZoneMerge file raw record count = %d, remain bytes = %d\n", record_count, remain_size);
+		return record_count;
 	}
 }
 
@@ -88,6 +136,7 @@ int ReadZoneMerge(Zone_Device_Merge *zone_merges)
 	int readSize = 0;
 	u_int8_t buffer[sizeof(Zone_Device_Merge)];
 	int count = 0; 
+	int record_index = 0;
 	#ifdef DEBUGLPRINT
 	int xx = 0;
 	#endif
@@ -112,7 +161,7 @@ int ReadZoneMerge(Zone_Device_Merge *zone_merges)
 
 	do
 	{
-		// 一次讀88byte
+		// 一次讀一筆 Zone_Device_Merge
 		readSize = fread(buffer, sizeof(buffer), 1, fp);
 
 		if (readSize == 1)
@@ -127,41 +176,30 @@ int ReadZoneMerge(Zone_Device_Merge *zone_merges)
 #endif
 
 			// # ieeeAddress == 0表示該段 88byte資料無效
-			if ((p_zone_device_merge->ieeeAddress[0] == 0) & (p_zone_device_merge->ieeeAddress[1] == 0) &
-				(p_zone_device_merge->ieeeAddress[2] == 0) & (p_zone_device_merge->ieeeAddress[3] == 0) &
-				(p_zone_device_merge->ieeeAddress[4] == 0) & (p_zone_device_merge->ieeeAddress[5] == 0) &
-				(p_zone_device_merge->ieeeAddress[6] == 0) & (p_zone_device_merge->ieeeAddress[7] == 0))
+			if (IsZeroIeeeAddress(p_zone_device_merge->ieeeAddress))
 			{
-				#ifdef DEBUGLPRINT
-				printf("iot. invalid data\n");
-				#endif
+				PrintZoneMergeDecision(record_index, p_zone_device_merge, "drop zero-ieee");
 			}
 			else
 			{
 				// todo 因為目前出力裝置配對會出現五組資料,因此先將資料合併唯一,判斷方式為與前一筆ieeeaddress比對,一樣則放棄這一筆
-				if ((p_zone_device_merge->ieeeAddress[0] == zone_merges[count - 1].ieeeAddress[0]) &
-					(p_zone_device_merge->ieeeAddress[1] == zone_merges[count - 1].ieeeAddress[1]) &
-					(p_zone_device_merge->ieeeAddress[2] == zone_merges[count - 1].ieeeAddress[2]) &
-					(p_zone_device_merge->ieeeAddress[3] == zone_merges[count - 1].ieeeAddress[3]) &
-					(p_zone_device_merge->ieeeAddress[4] == zone_merges[count - 1].ieeeAddress[4]) &
-					(p_zone_device_merge->ieeeAddress[5] == zone_merges[count - 1].ieeeAddress[5]) &
-					(p_zone_device_merge->ieeeAddress[6] == zone_merges[count - 1].ieeeAddress[6]) &
-					(p_zone_device_merge->ieeeAddress[7] == zone_merges[count - 1].ieeeAddress[7]) )
+				if (count > 0 && IsSameIeeeAddress(p_zone_device_merge->ieeeAddress, zone_merges[count - 1].ieeeAddress))
 				{
-					#ifdef DEBUGLPRINT
-					printf("iot. duplicate data\n");
-					#endif
+					PrintZoneMergeDecision(record_index, p_zone_device_merge, "drop duplicate-ieee");
 				}
 				else
 				{
 					zone_merges[count] = *p_zone_device_merge;
+					PrintZoneMergeDecision(record_index, p_zone_device_merge, "keep");
 					count++;
 				}
 			}
+			record_index++;
 		}
 	} while (readSize == 1);
 	sync();
 	fclose(fp);
+	printf("iot. ZoneMerge accepted record count = %d\n", count);
 
 	#ifdef DEBUG
 		printf("iot. count = %d\n", count);

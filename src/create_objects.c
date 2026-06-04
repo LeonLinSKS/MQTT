@@ -87,9 +87,7 @@ int ReadAllData(void)
 
     sensorCount = ReadZoneMergeSize(); // 讀取檔案中sensor資料(包含廢資料)
 
-#ifdef DEBUGLPRINT
     printf("iot. ZoneMerge file sensorCount = %d \n", sensorCount);
-#endif
 
     if (sensorCount == 0)
     {
@@ -111,9 +109,7 @@ int ReadAllData(void)
         deviceNumTemp = ReadZoneMerge(zone_merges); // 取得真正有用資料數與zone_merges
 // RawDataInfo = calloc(deviceNumTemp, sizeof(RawDataInfo_t));
 // RawDataInfo_t RawDataInfo[deviceNumTemp];
-#ifdef DEBUGLPRINT
         printf("iot. real number of ZoneMerge file = %d\n", deviceNumTemp);
-#endif
     }
 
 //============ReadZoneStatus==============
@@ -612,6 +608,8 @@ int CJSON_CDECL create_JSONobjects(unsigned char index)
 
         if (loop_count > loop_array_size)
             loop_count = loop_array_size;
+
+        cJSON_AddItemToObject(root, "loopArrayRaw", cJSON_CreateIntArray(DeviceInfo.attributes.looparray, loop_count));
 
         for (loop_index = 0; loop_index < loop_count; loop_index++)
         {
