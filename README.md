@@ -102,3 +102,13 @@ make
 輸出檔案：
 
 - `fw_data/MqttComm`
+
+## 9. 版本紀錄
+
+### 098C
+
+- 新增 MQTT publish JSON payload 紀錄，VM 環境輸出至 `MQTT_json.log`，正式環境輸出至 `/var/www/MQTT_json.log`
+- 每輪 `mqtt_listener` 發送前會清空上一輪 JSON 紀錄，只保留最新一輪資料
+- `ReadZoneMerge` 改用 `sizeof(Zone_Device_Merge)` 計算讀取筆數，並輸出檔案大小、原始筆數、剩餘 bytes 與有效筆數
+- 新增 ZoneMerge IEEE address 檢查，過濾全 0 資料與連續重複資料，並印出 keep/drop 判斷
+- MQTT JSON 新增 `loopArrayRaw` 欄位，用於比對原始 loop array 與有效 loop array
